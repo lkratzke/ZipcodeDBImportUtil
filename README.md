@@ -7,6 +7,7 @@ This is a demo project useful for learning a few handy technologies:
 * Mongo
 * OpenCSV
 * java.util.Scanner
+* java.util.zip.ZipInputStream
 
 This is a command line Java application containing a list of all US zip codes. The project contains a CSV file that can be extracted if you need CSV data. 
 
