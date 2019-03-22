@@ -37,7 +37,7 @@ Example:
  For Mongo you don't need to do anything if you are running without authentication
  enabled. Otherwise you will need to create a user and grant readWrite. The DB
  will be created automatically on first insert. In the example below your DB
- will be zipcodetest, authDB will be zipcodetest, user will be zipuser, and password
+ will be zipcodeTest, authDB will be zipcodetest, user will be zipuser, and password
  will be zippass.
  
  ```
