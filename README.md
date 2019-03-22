@@ -8,18 +8,17 @@ This is a demo project useful for learning a few handy technologies:
 * OpenCSV
 * java.util.Scanner
 
-This is a command line Java application containing a list of all US zip codes. The project contains a CSV file that can be extracted if you need CSV data. The app can produce a SQL or JSON files that can be used to import into an existing database.
-Optionally it can import the data directly into an existing MySQL or Mongo database.
+This is a command line Java application containing a list of all US zip codes. The project contains a CSV file that can be extracted if you need CSV data. 
 
-To run, just compile the project and run the executable jar.
+To run, compile the project `(mvn clean install)` and then run the executable jar.
 
-When executed from the command line you will be asked if you want to create a SQL/JSON file or perform an import.
+When executed from the command line you will be asked if you want to create a SQL/JSON file `(F)` or perform an import into an existing database `(I)`.
 
-If the import option is chosen, it will collect database connection info from the user and perform the import.
+If the import option is chosen, the app will collect database connection info from the user and perform the import.
 
 **SQL/JSON File**
 
-Simply select `F` when prompted if you want to generate a File or perform an Import. The application will generate `zipcode.sql` or `zipcode.json` depending upon the type of database selected.
+Select `F` when prompted if you want to generate a File. The application will generate `zipcode.sql` or `zipcode.json` depending upon the type of database selected. The application then exits.
 
 **MySQL**
 
