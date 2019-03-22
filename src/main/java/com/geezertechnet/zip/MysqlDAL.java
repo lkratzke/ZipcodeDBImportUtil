@@ -17,15 +17,10 @@
 
 package com.geezertechnet.zip;
 
-import com.opencsv.CSVReader;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.VARCHAR;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.stereotype.Component;
@@ -37,8 +32,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class MysqlDAL {
   
-  private static final String createTable = 
-          "CREATE TABLE zips (\n" +
+  private static final String CREATE_TABLE = 
+          "CREATE TABLE zipcodetest (\n" +
           "  ID               BIGINT        NOT NULL AUTO_INCREMENT,\n" +
           "  RECORD_NUM       VARCHAR(255)  NOT NULL,\n" +
           "  ZIPCODE          VARCHAR(255)  NOT NULL,\n" +
@@ -63,80 +58,87 @@ public class MysqlDAL {
           "  PRIMARY KEY (`ID`)\n" +
           ")";
   
-  private static String dropTable = "drop table if exists zips";
+  private static final String DROP_TABLE = "drop table if exists zipcodetest";
   
-  private static final String insertRow = 
-          "INSERT INTO zips (RECORD_NUM, ZIPCODE, ZIPCODE_TYPE, CITY, STATE, " + 
+  private static final String INSERT_ROW = 
+          "INSERT INTO zipcodetest (RECORD_NUM, ZIPCODE, ZIPCODE_TYPE, CITY, STATE, " + 
           "LOCATION_TYPE, LAT, LON, XAXIS, YAXIS, ZAXIS, WORLD_REGION, COUNTRY, " + 
           "LOCATION_TEXT, LOCATION, DECOM, TAXRETURNS_FILED, EST_POP, TOTAL_WAGES, " + 
           "NOTES) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
-  private static final int[] sqlTypes = new int[]{
+  private static final int[] SQL_TYPES = new int[]{
     VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, 
     VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, 
     BIGINT,  BIGINT,  BIGINT,  VARCHAR};
   
-  public void importData(ParamBean params) {
-    JdbcTemplate jdbcTemplate = getJdbcTemplate(params);
-    
-    // Make the process repeatable to support hacking and tweaking
-    jdbcTemplate.execute(dropTable);
-    jdbcTemplate.execute(createTable);
-    
-    // Read lines from the CSV file and convert them into rows in the MySQL database.
-    CSVReader cvsReader = null;
-    int processed = 0;
-    
-    try {
-      InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("free-zipcode-database.zip");
-      ZipInputStream zis = new ZipInputStream(inputStream);
-      cvsReader = new CSVReader(new BufferedReader(new InputStreamReader(zis)));
-      
-      // Set the ZipInputStream to the position of the first and only entry 
-      // in this zip file which is the csv file.
-      ZipEntry zipEntry = zis.getNextEntry();
-      
-      String[] line;
-      line = cvsReader.readNext(); // header row
-      
-      while ((line = cvsReader.readNext()) != null) {
-        
-        // Move character and numeric data into object array
-        Object[] args = new Object[20];
-        System.arraycopy(line, 0, args, 0, 16);
-        
-        // Some elements need to be converted to Integers
-        args[16] = (line[16].isEmpty() ? 0 : Integer.parseInt(line[16]));
-        args[17] = (line[17].isEmpty() ? 0 : Integer.parseInt(line[17]));
-        args[18] = (line[18].isEmpty() ? 0 : Integer.parseInt(line[18]));
-        args[19] = line[19];
-        
-        // Insert row of data
-        jdbcTemplate.update(insertRow, args, sqlTypes);
-        if (++processed % 1000 == 0) {
-          System.out.println("Processed " + processed + " records");
-        }
-      }
-    } catch (IOException e) {
-      System.out.println(e.getMessage());
-    } finally {
-      if (cvsReader != null) {
-        try {cvsReader.close();} 
-        catch (IOException e) {}
-      }
-    }
-    
-    System.out.println("Processed a total of " + processed + " records");
-  }
-  
-  private JdbcTemplate getJdbcTemplate(ParamBean params) {
-    // Dynamically create a JdbcTemplate using connection params provided by user.
+  public boolean importData(ParamBean params) {
+    boolean success = true;
     SingleConnectionDataSource  dataSource = new SingleConnectionDataSource();
     dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-    dataSource.setUrl("jdbc:mysql://" + params.getHost() + ":" + params.getPort() + "/" + params.getDatabaseName());
+    
+    // My DB connection broke when we switched to daylight savings time. (PDT)
+    // The error was 
+    //     java.sql.SQLException: The server timezone value 'UTC' is unrecognized 
+    //     or represents more than one timezone. You must configure either the server 
+    //     or JDBC driver (via the serverTimezone configuration property) to use 
+    //     a more specifc timezone value if you want to utilize timezone support.
+    // The extra params below found on stackoverflow seem to fix the issue.
+    
+    dataSource.setUrl("jdbc:mysql://" + params.getHost() + ":" + params.getPort() + 
+            "/" + params.getDatabaseName() + 
+            "?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC");
     dataSource.setUsername(params.getUsername());
     dataSource.setPassword(params.getPassword());
     JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-    return jdbcTemplate;
+    
+    CsvFileReader cvsFileReader = new CsvFileReader();
+    int processed = 0;
+    
+    try {
+      // Make the process repeatable to support hacking and tweaking
+      jdbcTemplate.execute(DROP_TABLE);
+      jdbcTemplate.execute(CREATE_TABLE);
+    
+      ZipCodeBean z = null;
+      while ((z = cvsFileReader.nextZipCode()) != null) {
+        Object[] args = new Object[20];
+        args[0] = z.getRecordNumber();
+        args[1] = z.getZipCode();
+        args[2] = z.getZipCodeType();
+        args[3] = z.getCity();
+        args[4] = z.getState();
+        args[5] = z.getLocationType();
+        args[6] = z.getLat();
+        args[7] = z.getLon();
+        args[8] = z.getxAxis();
+        args[9] = z.getyAxis();
+        args[10] = z.getzAxis();
+        args[11] = z.getWorldRegion();
+        args[12] = z.getCountry();
+        args[13] = z.getLocationText();
+        args[14] = z.getLocation();
+        args[15] = z.getDecom();
+        args[16] = z.getTaxReturnsFiled();
+        args[17] = z.getEstimatedPopulation();
+        args[18] = z.getTotalWages();
+        args[19] = z.getNotes();
+        
+        // Insert row of data
+        jdbcTemplate.update(INSERT_ROW, args, SQL_TYPES);
+        
+        if (++processed % 1000 == 0) {
+          System.out.println("Processed " + processed + " records");
+        }
+      } 
+    } catch (IOException | DataAccessException e) {
+      System.out.println(e.getMessage());
+      success = false;
+    } finally {
+      cvsFileReader.close();
+      dataSource.destroy();
+    }
+    
+    System.out.println("Processed a total of " + processed + " records");
+    return success;
   }
 }

@@ -36,24 +36,27 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
  * 
  * <p><pre>
  * 
- * CREATE DATABASE ziptest;<br>
- * GRANT ALL PRIVILEGES ON ziptest to 'zip'@'%' IDENTIFIED BY 'zip';
+ * mysql -u root <-p password>
+ * CREATE DATABASE zipcodetest;<br>
+ * GRANT ALL PRIVILEGES ON zipcodetest.* to 'zipuser'@'%' IDENTIFIED BY 'zippass';
  * 
  * </pre></p>
  * <p>
  * For Mongo you don't need to do anything if you are running without authentication
  * enabled. Otherwise you will need to create a user and grant readWrite. The DB
  * will be created automatically on first insert. In the example below your DB
- * will be zip, authDB will be zip, user will be zip, and pass will also be zip.
+ * will be zipcodetest, authDB will be zipcodetest, user will be zipuser, and password
+ * will be zippass.
  * </p>
  * <p><pre>
  * 
- * use zip
+ * mongo -u admin -p admin --authenticationDatabase admin --port 27017
+ * use zipcodeTest
  * db.createUser(
  *   {
- *     user: "zip",
- *     pwd: "zip",
- *     roles: [ { role: "readWrite", db: "zip" } ]
+ *     user: "zipuser",
+ *     pwd: "zippass",
+ *     roles: [ { role: "readWrite", db: "zipcodeTest" } ]
  *   }
  * )
  * 
@@ -63,7 +66,7 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 
 // Prevent Spring Boot from creating a default Mongo connection on localhost
 @SpringBootApplication(exclude = {MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
-public class ZipMysqlMongoApp implements CommandLineRunner {
+public class ZipcodeDBImportUtilApp implements CommandLineRunner {
   
   // We could just instantiate these but will use Spring injection because it's fun.
   @Autowired
@@ -73,8 +76,8 @@ public class ZipMysqlMongoApp implements CommandLineRunner {
   private MongoDAL mongoDAL;
 
   public static void main(String[] args) throws Exception {
+    SpringApplication app = new SpringApplication(ZipcodeDBImportUtilApp.class);
     //Disable the Spring logo banner.
-    SpringApplication app = new SpringApplication(ZipMysqlMongoApp.class);
     app.setBannerMode(Banner.Mode.OFF);
     app.run(args);
   }
@@ -87,13 +90,20 @@ public class ZipMysqlMongoApp implements CommandLineRunner {
       getUserInput(params);
     }
 
+    boolean success = false;
     switch (params.getDatabaseType()) {
       case MYSQL:
-        mysqlDAL.importData(params);
+        success = mysqlDAL.importData(params);
         break;
       case MONGO:
-        mongoDAL.importData(params);
+        success = mongoDAL.importData(params);
         break;
+    }
+    
+    if (success) {
+      System.out.println("Successfully imported all data.");
+    } else {
+      System.out.println("Failed to import all data.");
     }
   }
   

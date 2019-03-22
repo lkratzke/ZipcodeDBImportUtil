@@ -20,16 +20,11 @@ package com.geezertechnet.zip;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoCredential;
+import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.opencsv.CSVReader;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import org.bson.Document;
 import org.springframework.stereotype.Component;
 
@@ -40,69 +35,58 @@ import org.springframework.stereotype.Component;
 @Component
 public class MongoDAL {
   
-  public void importData(ParamBean params) {
-    MongoClient mongoClient = null;
-    CSVReader csvReader = null;
+  public boolean importData(ParamBean params) {
+    boolean success = true;
+    MongoClient mongoClient = getMongoClient(params);
+    CsvFileReader cvsFileReader = new CsvFileReader();
     int processed = 0;
     
     try {
-      mongoClient = getMongoClient(params);
       MongoDatabase db = mongoClient.getDatabase(params.getDatabaseName());
-      MongoCollection<Document> zipCollection = db.getCollection("zips");
+      MongoCollection<Document> zipCollection = db.getCollection("zipcodeTestCollection");
+      // Make the test repeatable
+      zipCollection.drop();
+      ZipCodeBean z = null;
       
-      InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("free-zipcode-database.zip");
-      ZipInputStream zis = new ZipInputStream(inputStream);
-      csvReader = new CSVReader(new BufferedReader(new InputStreamReader(zis)));
-      
-      // Set the ZipInputStream to the position of the first and only entry 
-      // in this zip file which is the csv file.
-      ZipEntry zipEntry = zis.getNextEntry();
-      
-      String[] line;
-      line = csvReader.readNext(); // discard header row
-
-      while ((line = csvReader.readNext()) != null) {
+      while ((z = cvsFileReader.nextZipCode()) != null) {
         Document doc = new Document();
-        doc.put("RECORD_NUM", line[0]);
-        doc.put("ZIPCODE", line[1]);
-        doc.put("ZIPCODE_TYPE", line[2]);
-        doc.put("CITY", line[3]);
-        doc.put("STATE", line[4]);
-        doc.put("LOCATION_TYPE", line[5]);
-        doc.put("LAT", line[6]);
-        doc.put("LON", line[7]);
-        doc.put("XAXIS", line[8]);
-        doc.put("YAXIS", line[9]);
-        doc.put("ZAXIS", line[10]);
-        doc.put("WORLD_REGION", line[11]);
-        doc.put("COUNTRY", line[12]);
-        doc.put("LOCATION_TEXT", line[13]);
-        doc.put("LOCATION", line[14]);
-        doc.put("DECOM", line[15]);
-        doc.put("TAXRETURNS_FILED", line[16]);
-        doc.put("EST_POP", line[17]);
-        doc.put("TOTAL_WAGES", line[18]);
-        doc.put("NOTES", line[19]);
+        doc.put("recordNumber", z.getRecordNumber());
+        doc.put("zipcode", z.getZipCode());
+        doc.put("zipcodeType", z.getZipCodeType());
+        doc.put("city", z.getCity());
+        doc.put("state", z.getState());
+        doc.put("locationType", z.getLocationType());
+        doc.put("lat", z.getLat());
+        doc.put("lon", z.getLon());
+        doc.put("xAxis", z.getxAxis());
+        doc.put("yAxis", z.getyAxis());
+        doc.put("zAxis", z.getzAxis());
+        doc.put("worldRegion", z.getWorldRegion());
+        doc.put("country", z.getCountry());
+        doc.put("locationText", z.getLocationText());
+        doc.put("location", z.getLocation());
+        doc.put("decom", z.getDecom());
+        doc.put("taxReturnFiled", z.getTaxReturnsFiled());
+        doc.put("estPop", z.getEstimatedPopulation());
+        doc.put("totalWages", z.getTotalWages());
+        doc.put("notes", z.getNotes());
         
         zipCollection.insertOne(doc);
+        
         if (++processed % 1000 == 0) {
           System.out.println("Processed " + processed + " records");
-          System.out.println(doc.toJson());
         }
       }
-    } catch(IOException e) {
-      System.out.println(e);
+    } catch(IOException | MongoException | IllegalArgumentException e) {
+      System.out.println(e.getMessage());
+      success = false;
     } finally {
-      if (mongoClient != null) {
-        mongoClient.close();
-      }
-      if (csvReader != null) {
-        try {csvReader.close();} 
-        catch (IOException e) {System.out.println(e);}
-      }
+      cvsFileReader.close();
+      mongoClient.close();
     }
     
     System.out.println("Processed a total of " + processed + " records");
+    return success;
   }
   
   private MongoClient getMongoClient(ParamBean params) {
@@ -118,5 +102,4 @@ public class MongoDAL {
     
     return mongoClient;
   }
-  
 }
