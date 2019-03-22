@@ -23,6 +23,7 @@ package com.geezertechnet.zip;
  */
 public class ParamBean {
   
+  private boolean createImportFile;
   private DatabaseType databaseType;
   private String host;
   private String port;
@@ -32,6 +33,14 @@ public class ParamBean {
   private boolean useAuth;
   private String authDB;
   private boolean approved;
+
+  public boolean isCreateImportFile() {
+    return createImportFile;
+  }
+
+  public void setCreateImportFile(boolean createImportFile) {
+    this.createImportFile = createImportFile;
+  }
 
   public DatabaseType getDatabaseType() {
     return databaseType;

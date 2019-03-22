@@ -17,7 +17,6 @@
 
 package com.geezertechnet.zip;
 
-import java.util.Scanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.Banner;
 import org.springframework.boot.CommandLineRunner;
@@ -84,112 +83,40 @@ public class ZipcodeDBImportUtilApp implements CommandLineRunner {
 
   @Override
   public void run(String... args) throws Exception {
+    
     ParamBean params = new ParamBean();
     
     while (!params.isApproved()) {
-      getUserInput(params);
+      UserInput userInput = new UserInput();
+      userInput.collectUserInput(params);
     }
 
     boolean success = false;
-    switch (params.getDatabaseType()) {
-      case MYSQL:
-        success = mysqlDAL.importData(params);
-        break;
-      case MONGO:
-        success = mongoDAL.importData(params);
-        break;
+    
+    if (params.isCreateImportFile()) {
+      switch (params.getDatabaseType()) {
+        case MYSQL:
+          success = mysqlDAL.generateSQLImportFile();
+          break;
+        case MONGO:
+          success = mongoDAL.generateJsonImportFile();
+          break;
+      }
+    } else {
+      switch (params.getDatabaseType()) {
+        case MYSQL:
+          success = mysqlDAL.importData(params);
+          break;
+        case MONGO:
+          success = mongoDAL.importData(params);
+          break;
+      }
     }
     
     if (success) {
-      System.out.println("Successfully imported all data.");
+      System.out.println("Successfully imported/exported all data.");
     } else {
-      System.out.println("Failed to import all data.");
+      System.out.println("Failed to import/export all data.");
     }
   }
-  
-  private void getUserInput(ParamBean params) {
-    Scanner input = new Scanner(System.in);
-
-    params.setDatabaseType(getDatabaseType(input));
-    params.setHost(getStringInput(input, "Host? ", params.getHost()));
-    params.setPort(getStringInput(input, "Port? ", params.getPort()));
-    params.setDatabaseName(getStringInput(input, "Database name? ", params.getDatabaseName()));
-    
-    if (params.getDatabaseType().equals(DatabaseType.MYSQL)) {
-      params.setUseAuth(true);
-    } else {
-      params.setUseAuth(getUseAuth(input));
-    }
-    
-    if (params.isUseAuth()) {
-      if (params.getDatabaseType() == DatabaseType.MONGO) {
-        params.setAuthDB(getStringInput(input, "Auth DB name? ", params.getAuthDB()));
-      }
-      params.setUsername(getStringInput(input, "User Name? ", params.getUsername()));
-      params.setPassword(getStringInput(input, "Password? ", params.getPassword()));
-    }
-    
-    System.out.println();
-    System.out.println("Database Type: " + params.getDatabaseType());
-    System.out.println("Host: " + params.getHost());
-    System.out.println("Port: " + params.getPort());
-    System.out.println("Database Name: " + params.getDatabaseName());
-    System.out.println("Auth: " + params.isUseAuth());
-    System.out.println("Username: " + params.getUsername());
-    System.out.println("Password: " + params.getPassword());
-    System.out.println("Auth DB (mongo only): " + params.getAuthDB());
-    
-    System.out.println();
-    System.out.println("Is this correct? y/n");
-    params.setApproved(input.nextLine().equalsIgnoreCase("y"));
-  }
-  
-  private String getStringInput(Scanner input, String question, String defaultVal) {
-    System.out.println();
-    System.out.println(question);
-    if (defaultVal != null && defaultVal.length() > 0) {
-      System.out.print("(" + defaultVal + ") ");
-    }
-    String answer = input.nextLine().trim();
-    if (answer.length() == 0) {
-      return defaultVal;
-    }
-    return answer;
-  }
-
-  private boolean getUseAuth(Scanner input) {
-    String useAuth = null;
-    while (useAuth == null) {
-      System.out.println();
-      System.out.println("Is authentication required? y/n ");
-      String s = input.nextLine();
-      if (s.toLowerCase().equals("y") || s.toLowerCase().equals("n")) {
-        useAuth = s;
-      }
-    }
-    return useAuth.equals("y");
-  }
-
-  private DatabaseType getDatabaseType(Scanner input) {
-    DatabaseType databaseType = null;
-
-    while (databaseType == null) {
-      System.out.println();
-      System.out.println("Database type? ");
-      System.out.println("1. MySQL (1)");
-      System.out.println("2. Mongo (2)");
-      String val = input.nextLine();
-      try {
-        int i = Integer.parseInt(val);
-        DatabaseType t = DatabaseType.find(i);
-        if (t != null) {
-          databaseType = t;
-        }
-      } catch (Exception e) {
-        System.out.println("Please input a valid value.");
-      }
-    }
-    return databaseType;
-  }
-
 }

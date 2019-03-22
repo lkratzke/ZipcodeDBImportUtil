@@ -17,7 +17,9 @@
 
 package com.geezertechnet.zip;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.VARCHAR;
 import org.springframework.dao.DataAccessException;
@@ -65,6 +67,12 @@ public class MysqlDAL {
           "LOCATION_TYPE, LAT, LON, XAXIS, YAXIS, ZAXIS, WORLD_REGION, COUNTRY, " + 
           "LOCATION_TEXT, LOCATION, DECOM, TAXRETURNS_FILED, EST_POP, TOTAL_WAGES, " + 
           "NOTES) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  
+  private static final String INSERT_ROW_SQL_PREFIX = 
+          "INSERT INTO zipcodetest (RECORD_NUM, ZIPCODE, ZIPCODE_TYPE, CITY, STATE, " + 
+          "LOCATION_TYPE, LAT, LON, XAXIS, YAXIS, ZAXIS, WORLD_REGION, COUNTRY, " + 
+          "LOCATION_TEXT, LOCATION, DECOM, TAXRETURNS_FILED, EST_POP, TOTAL_WAGES, " + 
+          "NOTES) VALUES ";
     
   private static final int[] SQL_TYPES = new int[]{
     VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, 
@@ -140,5 +148,83 @@ public class MysqlDAL {
     
     System.out.println("Processed a total of " + processed + " records");
     return success;
+  }
+  
+  public boolean generateSQLImportFile() {
+    boolean success = true;
+    CsvFileReader cvsFileReader = new CsvFileReader();
+    int processed = 0;
+    PrintWriter out = null;
+    
+    try {
+      out = new PrintWriter(new FileWriter("zipcode.sql"));
+      out.println(CREATE_TABLE);
+      out.println();
+      out.println(INSERT_ROW_SQL_PREFIX);
+      
+      ZipCodeBean z = null;
+      boolean first = true;
+      while ((z = cvsFileReader.nextZipCode()) != null) {
+        if (first) {
+          first = false;
+        } else {
+          out.println(",");
+        }
+        out.print(getInsertSql(z));
+        
+        processed++;
+      }
+      out.println(";");
+      
+    } catch (IOException e) {
+      System.out.println(e.getMessage());
+      success = false;
+    } finally {
+      if (out !=null) {
+        out.close();
+      }
+    }
+    System.out.println("Processed " + processed + " records");
+    return success;
+  }
+  
+  private String getInsertSql(ZipCodeBean z) {
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("(");
+    appendLong(sb, z.getRecordNumber());
+    appendString(sb, z.getZipCode());
+    appendString(sb, z.getZipCodeType());
+    appendString(sb, z.getCity());
+    appendString(sb, z.getState());
+    appendString(sb, z.getLocationType());
+    appendString(sb, z.getLat());
+    appendString(sb, z.getLon());
+    appendString(sb, z.getxAxis());
+    appendString(sb, z.getyAxis());
+    appendString(sb, z.getzAxis());
+    appendString(sb, z.getWorldRegion());
+    appendString(sb, z.getCountry());
+    appendString(sb, z.getLocationText());
+    appendString(sb, z.getLocation());
+    appendString(sb, z.getDecom());
+    appendLong(sb, z.getTaxReturnsFiled());
+    appendLong(sb, z.getEstimatedPopulation());
+    appendLong(sb, z.getTotalWages());
+    appendString(sb, z.getNotes());
+    sb.delete(sb.length()-2, sb.length());
+    sb.append(")");
+    return sb.toString();
+  }
+  
+  private void appendString(StringBuilder sb, String s) {
+    sb.append("'");
+    sb.append(s.replace("'", "\\'"));
+    sb.append("', ");
+  }
+  
+  private void appendLong(StringBuilder sb, long val) {
+    sb.append(val);
+    sb.append(", ");
   }
 }

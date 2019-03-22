@@ -17,6 +17,10 @@
 
 package com.geezertechnet.zip;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoCredential;
@@ -24,7 +28,9 @@ import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import org.bson.Document;
 import org.springframework.stereotype.Component;
 
@@ -101,5 +107,38 @@ public class MongoDAL {
     }
     
     return mongoClient;
+  }
+  
+  public boolean generateJsonImportFile() {
+    boolean success = true;
+    CsvFileReader cvsFileReader = new CsvFileReader();
+    int processed = 0;
+    PrintWriter out = null;
+    
+    JsonFactory jsonFactory = new JsonFactory();
+    jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+    ObjectMapper mapper = new ObjectMapper(jsonFactory);
+    // Uncomment for pretty JSON data.
+//    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+    
+    try {
+      out = new PrintWriter(new FileWriter("zipcode.json"));
+      ZipCodeBean z = null;
+      
+      while ((z = cvsFileReader.nextZipCode()) != null) {
+        out.println(mapper.writeValueAsString(z));
+        processed++;
+      }
+      
+    } catch (IOException e) {
+      System.out.println(e.getMessage());
+      success = false;
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+    System.out.println("Processed " + processed + " records");
+    return success;
   }
 }
