@@ -10,6 +10,8 @@ This is a demo project useful for learning a few handy technologies:
 
 This is a command line Java application containing a list of all US zip codes. The project contains a CSV file that can be extracted if you need CSV data. 
 
+http://federalgovernmentzipcodes.us/
+
 To run, compile the project `(mvn clean install)` and then run the executable jar.
 
 When executed from the command line you will be asked if you want to create a SQL/JSON file `(F)` or perform an import into an existing database `(I)`.
@@ -39,6 +41,7 @@ Example:
  will be zipcodeTest, authDB will be zipcodeTest, user will be zipuser, and password
  will be zippass.
  
+ Example:
  ```
 mongo -u admin -p admin --authenticationDatabase admin --port 27017
 use zipcodeTest
