@@ -16,11 +16,11 @@ When executed from the command line you will be asked if you want to create a SQ
 
 If the import option is chosen, the app will collect database connection info from the user and perform the import.
 
-**SQL/JSON File**
+## SQL/JSON File
 
 Select `F` when prompted if you want to generate a File. The application will generate `zipcode.sql` or `zipcode.json` depending upon the type of database selected. The application then exits.
 
-**MySQL**
+## MySQL
 
 For MySQL import, ensure you have created a test database and user ahead of time. The applicaton will create a table named zipcodetest in the specified database and populate the table with zipcodes and their locations.
 
@@ -31,7 +31,7 @@ Example:
  GRANT ALL PRIVILEGES ON zipcodetest.* to 'zipuser'@'%' IDENTIFIED BY 'zippass';`
 ```
 
-**Mongo**
+## Mongo
 
  For Mongo you don't need to do anything if you are running without authentication
  enabled. Otherwise you will need to create a user and grant readWrite. The DB
