@@ -116,7 +116,6 @@ public class MongoDAL {
     PrintWriter out = null;
     
     JsonFactory jsonFactory = new JsonFactory();
-    jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
     ObjectMapper mapper = new ObjectMapper(jsonFactory);
     // Uncomment for pretty JSON data.
 //    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
