@@ -29,7 +29,7 @@ For MySQL import, ensure you have created a test database and user ahead of time
 
 Example:
 ```
- mysql -u root <-p password>
+ mysql -u root -p
  CREATE DATABASE zipcodetest;
  GRANT ALL PRIVILEGES ON zipcodetest.* to 'zipuser'@'%' IDENTIFIED BY 'zippass';`
 ```
